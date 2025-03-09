@@ -4,16 +4,16 @@
 #include "socket.h"
 
 int main() {
-    std::shared_ptr<net::ClientSocket> socket = std::make_shared<net::ClientSocket>();
-    std::shared_ptr<net::InetAddress> addr = std::make_shared<net::IPV4InetAddress>("127.0.0.1", 8888);
+    auto socket = std::make_shared<net::ClientSocket>();
+    auto addr = std::make_shared<net::IPV4InetAddress>("127.0.0.1", 8888);
     if (!socket->connect(addr)) {
-        std::cerr << "socket connect error" << std::endl;
+        LOG_ERROR("socket connect error");
         return -1;
     }
     char buffer[1024];
     while(true) {
         bzero(&buffer, sizeof(buffer));
-        if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+        if (fgets(buffer, sizeof(buffer), stdin) == nullptr) {
             break;
         }
         buffer[strcspn(buffer, "\n")] = '\0';

@@ -13,7 +13,11 @@
 #include <fcntl.h>
 #include <sys/epoll.h>
 
+#define LOG_INFO(msg) std::cout << "[INFO] " << msg << std::endl
+#define LOG_ERROR(msg) std::cerr << "[ERROR] " << msg << std::endl
+
 namespace net {
+
 
 void setNonBlocking(int fd)
 {
@@ -55,7 +59,7 @@ public:
         return false;
     }
 
-    std::string ToString()
+    std::string ToString() override
     {
         char ip_str[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &serv_addr.sin_addr, ip_str, INET_ADDRSTRLEN);
@@ -92,6 +96,9 @@ public:
         close(sockfd_);
     }
 
+    Socket(const Socket&) = delete;
+    Socket& operator=(const Socket&) = delete;
+
     int getFd() const
     {
         return sockfd_;
@@ -107,10 +114,13 @@ public:
 
     bool setupListeningSocket(std::shared_ptr<InetAddress> addr, bool is_reuse_addr = true)
     {
-        int opt = 1;
-        if (setsockopt(sockfd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
-            return false;
+        if (is_reuse_addr) {
+            int opt = 1;
+            if (setsockopt(sockfd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
+                return false;
+            }
         }
+        
         if (bind(sockfd_, (sockaddr*)&(addr->getSockAddr()), addr->getAddrLen()) == -1) {
             return false;
         }
@@ -158,6 +168,9 @@ public:
         }
     }
 
+    Epoll(const Epoll&) = delete;
+    Epoll& operator=(const Epoll&) = delete;
+
     int getFd() const
     {
         return epfd_;
@@ -199,11 +212,11 @@ public:
         char buffer[1024];
         while (true) {
             bzero(&buffer, sizeof(buffer));
-            ssize_t read_bytes = recv(fd, buffer, sizeof(buffer), 0);
+            ssize_t read_bytes = recv(fd, buffer, sizeof(buffer) - 1, 0);
             if (read_bytes > 0) {
-                std::cout << "message from client fd: " << fd << " message: " << buffer << std::endl;
+                LOG_INFO("message from client fd: " + std::to_string(fd) + " message: " + buffer);
             } else if (read_bytes == 0) {
-                std::cout << "client disconnected fd:" << fd << std::endl;
+                LOG_INFO("client disconnected fd:" + std::to_string(fd));
                 break;
             } else if (read_bytes == -1 && errno == EINTR) {
                 continue;  // 信号中断，继续读取
