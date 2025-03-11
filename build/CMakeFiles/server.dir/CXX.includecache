@@ -30,7 +30,7 @@ fcntl.h
 sys/epoll.h
 -
 
-/root/open_source/cpp-socket/example/server.cpp
+/root/source_project/cpp-socket/example/server.cpp
 iostream
 -
 memory
@@ -38,9 +38,9 @@ memory
 csignal
 -
 socket.h
-/root/open_source/cpp-socket/example/socket.h
+/root/source_project/cpp-socket/example/socket.h
 
-/root/open_source/cpp-socket/src/socket.cpp
+/root/source_project/cpp-socket/src/socket.cpp
 socket.h
-/root/open_source/cpp-socket/src/socket.h
+/root/source_project/cpp-socket/src/socket.h
 

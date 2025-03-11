@@ -1,4 +1,4 @@
-/root/open_source/cpp-socket/build/CMakeFiles/rebuild_cache.dir
-/root/open_source/cpp-socket/build/CMakeFiles/edit_cache.dir
-/root/open_source/cpp-socket/build/CMakeFiles/client.dir
-/root/open_source/cpp-socket/build/CMakeFiles/server.dir
+/root/source_project/cpp-socket/build/CMakeFiles/rebuild_cache.dir
+/root/source_project/cpp-socket/build/CMakeFiles/edit_cache.dir
+/root/source_project/cpp-socket/build/CMakeFiles/client.dir
+/root/source_project/cpp-socket/build/CMakeFiles/server.dir

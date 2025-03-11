@@ -6,5 +6,5 @@ CXX_FLAGS =   -std=c++11
 
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/root/open_source/cpp-socket/include 
+CXX_INCLUDES = -I/root/source_project/cpp-socket/include 
 

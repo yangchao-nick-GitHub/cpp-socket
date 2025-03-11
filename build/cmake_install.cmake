@@ -1,4 +1,4 @@
-# Install script for directory: /root/open_source/cpp-socket
+# Install script for directory: /root/source_project/cpp-socket
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/root/open_source/cpp-socket/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/root/source_project/cpp-socket/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

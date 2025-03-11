@@ -3,7 +3,7 @@
 
 CMakeFiles/server.dir/example/server.cpp.o
  ../include/socket.h
- /root/open_source/cpp-socket/example/server.cpp
+ /root/source_project/cpp-socket/example/server.cpp
 CMakeFiles/server.dir/src/socket.cpp.o
  ../include/socket.h
- /root/open_source/cpp-socket/src/socket.cpp
+ /root/source_project/cpp-socket/src/socket.cpp

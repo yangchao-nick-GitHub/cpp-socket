@@ -43,10 +43,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /root/open_source/cpp-socket
+CMAKE_SOURCE_DIR = /root/source_project/cpp-socket
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /root/open_source/cpp-socket/build
+CMAKE_BINARY_DIR = /root/source_project/cpp-socket/build
 
 # Include any dependencies generated for this target.
 include CMakeFiles/client.dir/depend.make
@@ -59,29 +59,29 @@ include CMakeFiles/client.dir/flags.make
 
 CMakeFiles/client.dir/example/client.cpp.o: CMakeFiles/client.dir/flags.make
 CMakeFiles/client.dir/example/client.cpp.o: ../example/client.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/open_source/cpp-socket/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/client.dir/example/client.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/client.dir/example/client.cpp.o -c /root/open_source/cpp-socket/example/client.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/source_project/cpp-socket/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/client.dir/example/client.cpp.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/client.dir/example/client.cpp.o -c /root/source_project/cpp-socket/example/client.cpp
 
 CMakeFiles/client.dir/example/client.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/client.dir/example/client.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /root/open_source/cpp-socket/example/client.cpp > CMakeFiles/client.dir/example/client.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /root/source_project/cpp-socket/example/client.cpp > CMakeFiles/client.dir/example/client.cpp.i
 
 CMakeFiles/client.dir/example/client.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/client.dir/example/client.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /root/open_source/cpp-socket/example/client.cpp -o CMakeFiles/client.dir/example/client.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /root/source_project/cpp-socket/example/client.cpp -o CMakeFiles/client.dir/example/client.cpp.s
 
 CMakeFiles/client.dir/src/socket.cpp.o: CMakeFiles/client.dir/flags.make
 CMakeFiles/client.dir/src/socket.cpp.o: ../src/socket.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/open_source/cpp-socket/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/client.dir/src/socket.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/client.dir/src/socket.cpp.o -c /root/open_source/cpp-socket/src/socket.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/source_project/cpp-socket/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/client.dir/src/socket.cpp.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/client.dir/src/socket.cpp.o -c /root/source_project/cpp-socket/src/socket.cpp
 
 CMakeFiles/client.dir/src/socket.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/client.dir/src/socket.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /root/open_source/cpp-socket/src/socket.cpp > CMakeFiles/client.dir/src/socket.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /root/source_project/cpp-socket/src/socket.cpp > CMakeFiles/client.dir/src/socket.cpp.i
 
 CMakeFiles/client.dir/src/socket.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/client.dir/src/socket.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /root/open_source/cpp-socket/src/socket.cpp -o CMakeFiles/client.dir/src/socket.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /root/source_project/cpp-socket/src/socket.cpp -o CMakeFiles/client.dir/src/socket.cpp.s
 
 # Object files for target client
 client_OBJECTS = \
@@ -95,7 +95,7 @@ client: CMakeFiles/client.dir/example/client.cpp.o
 client: CMakeFiles/client.dir/src/socket.cpp.o
 client: CMakeFiles/client.dir/build.make
 client: CMakeFiles/client.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/root/open_source/cpp-socket/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX executable client"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/root/source_project/cpp-socket/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX executable client"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/client.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -108,6 +108,6 @@ CMakeFiles/client.dir/clean:
 .PHONY : CMakeFiles/client.dir/clean
 
 CMakeFiles/client.dir/depend:
-	cd /root/open_source/cpp-socket/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /root/open_source/cpp-socket /root/open_source/cpp-socket /root/open_source/cpp-socket/build /root/open_source/cpp-socket/build /root/open_source/cpp-socket/build/CMakeFiles/client.dir/DependInfo.cmake --color=$(COLOR)
+	cd /root/source_project/cpp-socket/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /root/source_project/cpp-socket /root/source_project/cpp-socket /root/source_project/cpp-socket/build /root/source_project/cpp-socket/build /root/source_project/cpp-socket/build/CMakeFiles/client.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/client.dir/depend
 
