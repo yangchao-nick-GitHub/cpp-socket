@@ -139,7 +139,7 @@ std::vector<Channel*> Epoll::wait(int timeout)
     int fds = epoll_wait(epfd_, event, 1024, timeout);
     for (int i = 0; i < fds; i++) {
         Channel* avtive_ch = (Channel*)event[i].data.ptr;
-        avtive_ch
+        avtive_ch->setRevents(event[i].events);
         active_channels.push_back(avtive_ch);
     }
     return active_channels;

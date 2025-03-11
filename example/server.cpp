@@ -45,13 +45,15 @@ int main() {
         return -1;
     }
 
-    std::vector<int> active_fds;
     std::shared_ptr<net::Epoll> epoll = std::make_shared<net::Epoll>();
-    epoll->add(server->getFd(), EPOLLIN);
+    std::shared_ptr<net::Channel> server_chn = std::make_shared<net::Channel>(epoll, server->getFd());
+    server_chn->enableReading();
+
     while (running) {
-        active_fds = epoll->wait();
-        for (auto fd : active_fds) {
-            if (fd == server->getFd()) {
+        std::vector<net::Channel*> active_chns;
+        active_chns = epoll->wait();
+        for (auto chn : active_chns) {
+            if (chn->getFd() == server->getFd()) {
                 std::shared_ptr<net::InetAddress> cnt_addr = std::make_shared<net::IPV4InetAddress>();
                 int cnt_fd = server->accept(cnt_addr);
                 if (cnt_fd == -1) {
@@ -59,10 +61,10 @@ int main() {
                     continue;
                 }
                 LOG_INFO("new connection from: " + cnt_addr->ToString() + " fd: " + std::to_string(cnt_fd));
-                net::setNonBlocking(cnt_fd);
-                epoll->add(cnt_fd, EPOLLIN | EPOLLET);
+                std::shared_ptr<net::Channel> new_client_chn = std::make_shared<net::Channel>(epoll, cnt_fd);
+                new_client_chn->enableReading();
             } else {
-                activeFdServerHandle(fd);
+                activeFdServerHandle(chn->getFd());
             }
         }
     }

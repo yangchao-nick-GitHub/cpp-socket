@@ -66,12 +66,13 @@ public:
     bool connect(std::shared_ptr<InetAddress> addr);
 };
 
+class Channel;
+
 class Epoll {
 public:
     Epoll();
     ~Epoll();
     Epoll(const Epoll&) = delete;
-    Epoll& operator=(const Epoll&) = delete;
     int getFd() const;
     int add(int fd, uint32_t  opt);
     std::vector<Channel*> wait(int timeout = 1);
