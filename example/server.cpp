@@ -4,32 +4,10 @@
 
 #include "socket.h"
 
-volatile bool running = true;
 
 void signalHandler(int signum) {
     LOG_ERROR("Interrupt signal (" + std::to_string(signum) + ") received.");
     running = false;
-}
-
-void activeFdServerHandle(int fd)
-{
-    char buffer[1024];
-    while (true) {
-        bzero(&buffer, sizeof(buffer));
-        ssize_t read_bytes = recv(fd, buffer, sizeof(buffer) - 1, 0);
-        if (read_bytes > 0) {
-            LOG_INFO("message from client fd: " + std::to_string(fd) + " message: " + buffer);
-        } else if (read_bytes == 0) {
-            LOG_INFO("client disconnected fd:" + std::to_string(fd));
-            break;
-        } else if (read_bytes == -1 && errno == EINTR) {
-            continue;  // 信号中断，继续读取
-        } else if (read_bytes == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-            break;  // 非阻塞模式下暂时无数据，退出读取循环
-        } else {
-            break;
-        }
-    }
 }
 
 

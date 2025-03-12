@@ -159,12 +159,12 @@ void Epoll::updateChannel(Channel& channel)
     channel.setInEpoll();
 }
 
-Channel::Channel(std::shared_ptr<Epoll> epoll, int fd)
+Channel::Channel(std::shared_ptr<EventLoop> event_loop, int fd)
 {
-    if (epoll == nullptr) {
-        throw std::invalid_argument("epoll is null");
+    if (event_loop == nullptr) {
+        throw std::invalid_argument("event_loop is null");
     }
-    this->epoll = epoll;
+    this->event_loop = event_loop;
     this->monitor_fd = fd;
     monitor_events = 0;
 }
@@ -173,7 +173,7 @@ void Channel::enableReading()
 {
     monitor_events = EPOLLIN | EPOLLET;
     setNonBlocking(monitor_fd);
-    epoll->updateChannel(*this);
+    event_loop->updateChannel(*this);
 }
 
 int Channel::getFd()
@@ -204,6 +204,100 @@ void Channel::setInEpoll()
 void Channel::setRevents(uint32_t revents)
 {
     this->revents = revents;
+}
+
+void setCallback(std::function<void()> callback)
+{
+    this->callback = callback;
+}
+
+void Channel::handleEvent()
+{
+    callback();
+}
+
+EventLoop::EventLoop()
+{
+    epoll = std::make_shared<Epoll>();
+    quite = true;
+}
+
+void EventLoop::loop()
+{
+    while (quite) {
+        std::vector<Channel*> active_chns;
+        active_chns = epoll->wait();
+        for (auto chn : active_chns) {
+            chn->handleEvent();
+        }
+    }
+}
+
+void EventLoop::updateChannel(Channel& channel)
+{
+    epoll->updateChannel(channel);
+}
+
+void isQuite(bool quite)
+{
+    return quite;
+}
+
+Server::Server(std::shared_ptr<EventLoop> event_loop)
+{
+    if (event_loop == nullptr || ) {
+        throw std::invalid_argument("event_loop is nullptr");
+    }
+    if (!event_loop->isQuite()) {
+        throw std::invalid_argument("event_loop is not quite");
+    }
+
+    std::shared_ptr<ServerSocket> server = std::make_shared<ServerSocket>();
+    std::shared_ptr<InetAddress> addr = std::make_shared<IPV4InetAddress>("127.0.0.1", 8888);
+
+    if (!server->setupListeningSocket(addr)) {
+        LOG_ERROR("socket setup error");
+        return -1;
+    }
+
+    std::shared_ptr<Channel> server_chn = std::make_shared<Channel>(event_loop, server->getFd());
+    std::function<void()> callback = std::bind(&Server::handleNewConnection, this, server);
+    server_chn->setCallback(callback);
+    server_chn->enableReading();
+}
+
+void Server::handleNewConnection(std::shared_ptr<ServerSocket> server)
+{
+    std::shared_ptr<InetAddress> cnt_addr = std::make_shared<IPV4InetAddress>();
+    int cnt_fd = server->accept(cnt_addr);
+    if (cnt_fd == -1) {
+        LOG_ERROR("socket accept error");
+    }
+    LOG_INFO("new connection from: " + cnt_addr->ToString() + " fd: " + std::to_string(cnt_fd));
+    std::shared_ptr<Channel> new_client_chn = std::make_shared<Channel>(event_loop, cnt_fd);
+    new_client_chn->setCallback(std::bind(&Server::handleActiveConnection, this, cnt_fd));
+    new_client_chn->enableReading(); 
+}
+
+void Server::handleActiveConnection(int fd)
+{
+    char buffer[1024];
+    while (true) {
+        bzero(&buffer, sizeof(buffer));
+        ssize_t read_bytes = recv(fd, buffer, sizeof(buffer) - 1, 0);
+        if (read_bytes > 0) {
+            LOG_INFO("message from client fd: " + std::to_string(fd) + " message: " + buffer);
+        } else if (read_bytes == 0) {
+            LOG_INFO("client disconnected fd:" + std::to_string(fd));
+            break;
+        } else if (read_bytes == -1 && errno == EINTR) {
+            continue;  // 信号中断，继续读取
+        } else if (read_bytes == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            break;  // 非阻塞模式下暂时无数据，退出读取循环
+        } else {
+            break;
+        }
+    }
 }
     
 

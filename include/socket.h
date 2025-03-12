@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/epoll.h>
+#include <functional>
 
 #define LOG_INFO(msg) std::cout << "[INFO] " << msg << std::endl
 #define LOG_ERROR(msg) std::cerr << "[ERROR] " << msg << std::endl
@@ -82,16 +83,19 @@ private:
     struct epoll_event event[1024];
 };
 
+class EventLoop;
+
 class Channel
 {
 private:
-    std::shared_ptr<Epoll> epoll;
+    std::shared_ptr<EventLoop> event_loop;
     int monitor_fd;
     uint32_t monitor_events;
     uint32_t revents;
     bool inEpoll {false};
+    std::function<void()> callback;
 public:
-    Channel(std::shared_ptr<Epoll> epoll, int fd);
+    Channel(std::shared_ptr<EventLoop> event_loop, int fd);
     ~Channel() = default;
 
     void enableReading();
@@ -101,8 +105,32 @@ public:
     void setInEpoll();
     uint32_t getRevents();
     void setRevents(uint32_t revents);
+    void setCallback(std::function<void()> callback);
+    void handleEvent();
 };
 
-}
+class EventLoop {
+    public:
+        EventLoop();
+        ~EventLoop() = default;
+        void loop();
+        void updateChannel(Channel& channel);
+        void isQuite(bool quite);
+    private:
+        std::shared_ptr<Epoll> epoll;
+        bool quite {false};
+};
+    
+class Server {
+public:
+    Server(std::shared_ptr<EventLoop> event_loop);
+    ~Server() = default;
+    void handleActiveConnection();
+    void handleNewConnection();
+private:
+    std::shared_ptr<EventLoop> event_loop;  
+};
+
+};
 
 #endif
