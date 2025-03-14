@@ -1,13 +1,14 @@
 #include <iostream>
 #include <memory>
+#include <string.h>
 
 #include "socket.h"
 
 int main() {
     auto socket = std::make_shared<net::ClientSocket>();
-    auto addr = std::make_shared<net::IPV4InetAddress>("127.0.0.1", 8888);
+    auto addr = std::make_shared<net::IPV4InetAddress>("127.0.0.1", 5000);
     if (!socket->connect(addr)) {
-        LOG_ERROR("socket connect error");
+        perror("socket connect error");
         return -1;
     }
     char buffer[1024];

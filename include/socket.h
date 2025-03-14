@@ -11,8 +11,11 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <string>
 #include <sys/epoll.h>
 #include <functional>
+#include <unordered_map>
+#include <atomic>
 
 #define LOG_INFO(msg) std::cout << "[INFO] " << msg << std::endl
 #define LOG_ERROR(msg) std::cerr << "[ERROR] " << msg << std::endl
@@ -33,13 +36,13 @@ public:
 class IPV4InetAddress : public InetAddress {
 public:
     IPV4InetAddress();
-    IPV4InetAddress(const std::string& ip, uint16_t port);
+    explicit  IPV4InetAddress(const std::string& ip, uint16_t port);
     bool AddressValid(const std::string& ip, uint16_t port) override;
     std::string ToString() override;
     struct sockaddr_in& getSockAddr();
-    socklen_t getAddrLen() const;
+    socklen_t getAddrLen() const override;
 private:
-    struct sockaddr_in serv_addr;
+    struct sockaddr_in serv_addr {};
     socklen_t addr_len;
 };
 
@@ -110,25 +113,28 @@ public:
 };
 
 class EventLoop {
-    public:
-        EventLoop();
-        ~EventLoop() = default;
-        void loop();
-        void updateChannel(Channel& channel);
-        void isQuite(bool quite);
-    private:
-        std::shared_ptr<Epoll> epoll;
-        bool quite {false};
+public:
+    EventLoop();
+    ~EventLoop() = default;
+    void loop();
+    void updateChannel(Channel& channel);
+private:
+    std::shared_ptr<Epoll> epoll;
+    std::atomic<bool> quite {false};
 };
     
 class Server {
 public:
-    Server(std::shared_ptr<EventLoop> event_loop);
+    Server(std::string ip, uint16_t port);
     ~Server() = default;
-    void handleActiveConnection();
+    void handleActiveConnection(int fd);
     void handleNewConnection();
+    void handleClientDisconnect(int fd);
+    void start();
 private:
     std::shared_ptr<EventLoop> event_loop;  
+    std::shared_ptr<ServerSocket> server_socket;
+    std::unordered_map<int, std::shared_ptr<Channel>> channels;
 };
 
 };

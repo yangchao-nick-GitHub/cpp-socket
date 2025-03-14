@@ -22,14 +22,7 @@ IPV4InetAddress::IPV4InetAddress(const std::string& ip, uint16_t port): addr_len
 
 bool IPV4InetAddress::AddressValid(const std::string& ip, uint16_t port)
 {
-    if (port < 0 || port > 65535) {
-        return false;
-    }
-    struct sockaddr_in addr4;
-    if (inet_pton(AF_INET, ip.c_str(), &addr4.sin_addr) > 0) {
-        return true;
-    }
-    return false;
+    return (port <= 65535) && (inet_pton(AF_INET, ip.c_str(), &serv_addr.sin_addr) > 0);
 }
 
 std::string IPV4InetAddress::ToString()
@@ -72,6 +65,10 @@ ServerSocket::ServerSocket(): Socket() {}
 
 bool ServerSocket::setupListeningSocket(std::shared_ptr<InetAddress> addr, bool is_reuse_addr)
 {
+    if (addr == nullptr) {
+        return false;
+    }
+
     if (is_reuse_addr) {
         int opt = 1;
         if (setsockopt(sockfd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
@@ -206,7 +203,7 @@ void Channel::setRevents(uint32_t revents)
     this->revents = revents;
 }
 
-void setCallback(std::function<void()> callback)
+void Channel::setCallback(std::function<void()> callback)
 {
     this->callback = callback;
 }
@@ -219,12 +216,12 @@ void Channel::handleEvent()
 EventLoop::EventLoop()
 {
     epoll = std::make_shared<Epoll>();
-    quite = true;
+    quite.store(true);
 }
 
 void EventLoop::loop()
 {
-    while (quite) {
+    while (quite.load()) {
         std::vector<Channel*> active_chns;
         active_chns = epoll->wait();
         for (auto chn : active_chns) {
@@ -238,45 +235,51 @@ void EventLoop::updateChannel(Channel& channel)
     epoll->updateChannel(channel);
 }
 
-void isQuite(bool quite)
+
+Server::Server(std::string ip, uint16_t port)
 {
-    return quite;
+    server_socket = std::make_shared<ServerSocket>();
+    if (server_socket == nullptr) {
+        throw std::runtime_error("server_socket create error");
+    }
+
+    event_loop = std::make_shared<EventLoop>();
+    if (event_loop == nullptr) {
+        throw std::runtime_error("event_loop create error");
+    }
+
+    if (!server_socket->setupListeningSocket(std::make_shared<IPV4InetAddress>(ip, port), true)) {
+        throw std::runtime_error("socket setup error");
+    }
+    
+    auto sever_chn = std::make_shared<Channel>(event_loop, server_socket->getFd());
+    std::function<void()> callback = std::bind(&Server::handleNewConnection, this);
+    sever_chn->setCallback(callback);
+    sever_chn->enableReading();
+    channels.emplace(server_socket->getFd(), sever_chn);
 }
 
-Server::Server(std::shared_ptr<EventLoop> event_loop)
+void Server::handleNewConnection()
 {
-    if (event_loop == nullptr || ) {
-        throw std::invalid_argument("event_loop is nullptr");
-    }
-    if (!event_loop->isQuite()) {
-        throw std::invalid_argument("event_loop is not quite");
-    }
-
-    std::shared_ptr<ServerSocket> server = std::make_shared<ServerSocket>();
-    std::shared_ptr<InetAddress> addr = std::make_shared<IPV4InetAddress>("127.0.0.1", 8888);
-
-    if (!server->setupListeningSocket(addr)) {
-        LOG_ERROR("socket setup error");
-        return -1;
-    }
-
-    std::shared_ptr<Channel> server_chn = std::make_shared<Channel>(event_loop, server->getFd());
-    std::function<void()> callback = std::bind(&Server::handleNewConnection, this, server);
-    server_chn->setCallback(callback);
-    server_chn->enableReading();
-}
-
-void Server::handleNewConnection(std::shared_ptr<ServerSocket> server)
-{
-    std::shared_ptr<InetAddress> cnt_addr = std::make_shared<IPV4InetAddress>();
-    int cnt_fd = server->accept(cnt_addr);
+    auto cnt_addr = std::make_shared<IPV4InetAddress>();
+    int cnt_fd = server_socket->accept(cnt_addr);
     if (cnt_fd == -1) {
         LOG_ERROR("socket accept error");
     }
     LOG_INFO("new connection from: " + cnt_addr->ToString() + " fd: " + std::to_string(cnt_fd));
-    std::shared_ptr<Channel> new_client_chn = std::make_shared<Channel>(event_loop, cnt_fd);
-    new_client_chn->setCallback(std::bind(&Server::handleActiveConnection, this, cnt_fd));
-    new_client_chn->enableReading(); 
+    auto client_chn = std::make_shared<Channel>(event_loop, cnt_fd);
+    client_chn->setCallback(std::bind(&Server::handleActiveConnection, this, cnt_fd));
+    client_chn->enableReading();
+    channels.emplace(cnt_fd, client_chn);
+}
+
+void Server::handleClientDisconnect(int fd)
+{
+    LOG_INFO("client disconnected fd:" + std::to_string(fd));
+    auto it = channels.find(fd);
+    if (it!= channels.end()) {
+        channels.erase(fd);
+    }
 }
 
 void Server::handleActiveConnection(int fd)
@@ -286,9 +289,10 @@ void Server::handleActiveConnection(int fd)
         bzero(&buffer, sizeof(buffer));
         ssize_t read_bytes = recv(fd, buffer, sizeof(buffer) - 1, 0);
         if (read_bytes > 0) {
+            buffer[read_bytes] = '\0';
             LOG_INFO("message from client fd: " + std::to_string(fd) + " message: " + buffer);
         } else if (read_bytes == 0) {
-            LOG_INFO("client disconnected fd:" + std::to_string(fd));
+            handleClientDisconnect(fd);
             break;
         } else if (read_bytes == -1 && errno == EINTR) {
             continue;  // 信号中断，继续读取
@@ -298,6 +302,11 @@ void Server::handleActiveConnection(int fd)
             break;
         }
     }
+}
+
+void Server::start()
+{
+    event_loop->loop();
 }
     
 
