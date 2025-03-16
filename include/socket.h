@@ -22,7 +22,6 @@
 
 namespace net {
 
-void setNonBlocking(int fd);
 
 class InetAddress {
 public:
@@ -81,6 +80,8 @@ public:
     int add(int fd, uint32_t  opt);
     std::vector<Channel*> wait(int timeout = 1);
     void updateChannel(Channel& channel);
+    void addEvent(std::shared_ptr<Channel> channel);
+    void delEvent(Channel& channel);
 private:
     int epfd_;
     struct epoll_event event[1024];
@@ -90,26 +91,43 @@ class EventLoop;
 
 class Channel
 {
-private:
-    std::shared_ptr<EventLoop> event_loop;
+protected:
     int monitor_fd;
     uint32_t monitor_events;
     uint32_t revents;
-    bool inEpoll {false};
-    std::function<void()> callback;
+    bool is_in_epoll {false};
+    std::function<void()> event_cb {nullptr};
 public:
-    Channel(std::shared_ptr<EventLoop> event_loop, int fd);
-    ~Channel() = default;
+    Channel(int fd, std::function<void()> cb);
+    virtual ~Channel() = default;
 
-    void enableReading();
+    virtual void setEvent() = 0;
+    void setRevents(uint32_t revents);
     int getFd();
     uint32_t getEvents();
     bool getInEpoll();
-    void setInEpoll();
-    uint32_t getRevents();
-    void setRevents(uint32_t revents);
-    void setCallback(std::function<void()> callback);
+    void setInEpoll(bool is_in_epoll);
     void handleEvent();
+    void setNonBlocking();
+    void setCallback(std::function<void()> callback);
+    uint32_t getRevents();
+    
+};
+
+class Buffer;
+
+class AcceptChannel : public Channel {
+public:
+    AcceptChannel(int fd, std::function<void()> cb);
+    void setEvent() override;
+};
+
+class ConnectionChannel : public Channel {
+public:
+    ConnectionChannel(int fd, std::function<void()> cb);
+    void setEvent() override;
+private:
+    std::shared_ptr<Buffer> buffer;
 };
 
 class EventLoop {
@@ -117,10 +135,23 @@ public:
     EventLoop();
     ~EventLoop() = default;
     void loop();
+    void addEvent(std::shared_ptr<Channel> chn);
     void updateChannel(Channel& channel);
 private:
     std::shared_ptr<Epoll> epoll;
     std::atomic<bool> quite {false};
+};
+
+class Buffer {
+public:
+    Buffer() = default;
+    ~Buffer() = default;
+    void append(const char* data, size_t len);
+    const char* cStr();
+    size_t size();
+    void clear();
+private:
+    std::string buffer;
 };
     
 class Server {
@@ -131,10 +162,13 @@ public:
     void handleNewConnection();
     void handleClientDisconnect(int fd);
     void start();
+
 private:
+    Buffer buffer;
     std::shared_ptr<EventLoop> event_loop;  
     std::shared_ptr<ServerSocket> server_socket;
-    std::unordered_map<int, std::shared_ptr<Channel>> channels;
+    std::shared_ptr<Channel> accept;
+    std::unordered_map<int, std::shared_ptr<ConnectionChannel>> connections;
 };
 
 };
