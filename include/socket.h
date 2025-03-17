@@ -17,6 +17,8 @@
 #include <unordered_map>
 #include <atomic>
 
+#include "task_queue.h"
+
 #define LOG_INFO(msg) std::cout << "[INFO] " << msg << std::endl
 #define LOG_ERROR(msg) std::cerr << "[ERROR] " << msg << std::endl
 
@@ -102,6 +104,7 @@ public:
     virtual ~Channel() = default;
 
     virtual void setEvent() = 0;
+    std::function<void()> getEventCallBack();
     void setRevents(uint32_t revents);
     int getFd();
     uint32_t getEvents();
@@ -140,6 +143,7 @@ public:
 private:
     std::shared_ptr<Epoll> epoll;
     std::atomic<bool> quite {false};
+    std::shared_ptr<WorkQueue> wq;
 };
 
 class Buffer {

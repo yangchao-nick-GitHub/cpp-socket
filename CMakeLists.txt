@@ -14,9 +14,12 @@ set(SERVER_SOURCES example/server.cpp)
 
 add_executable(server ${SERVER_SOURCES} ${COMMON_SOURCES})
 target_include_directories(server PRIVATE include)
+target_link_libraries(server PRIVATE pthread)
+
 
 add_executable(client ${CLIENT_SOURCES} ${COMMON_SOURCES})
 target_include_directories(client PRIVATE include)
+target_link_libraries(client PRIVATE pthread)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(server PRIVATE -g)

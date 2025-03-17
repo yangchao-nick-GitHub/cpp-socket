@@ -1,10 +1,22 @@
 #include <iostream>
 #include <memory>
 #include <string.h>
+#include <signal.h>
 
 #include "socket.h"
 
+
+
+void handleSingal(int sig) 
+{
+    std::cout << "recv ctrl c singal, exit" << std::endl;
+    exit(0);
+}
+
 int main() {
+    /* handle ctrl c singal  */
+    signal(SIGINT, handleSingal);
+
     auto socket = std::make_shared<net::ClientSocket>();
     auto addr = std::make_shared<net::IPV4InetAddress>("127.0.0.1", 5000);
     if (!socket->connect(addr)) {

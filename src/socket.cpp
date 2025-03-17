@@ -225,6 +225,11 @@ void Channel::handleEvent()
     event_cb();
 }
 
+std::function<void()> Channel::getEventCallBack()
+{
+    return event_cb;
+}
+
 void Channel::setNonBlocking()
 {
     fcntl(monitor_fd, F_SETFL, fcntl(monitor_fd, F_GETFL) | O_NONBLOCK);
@@ -257,6 +262,7 @@ void ConnectionChannel::setEvent()
 
 EventLoop::EventLoop()
 {
+    wq = std::make_shared<WorkQueue>(2, 10);
     epoll = std::make_shared<Epoll>();
     quite.store(true);
 }
@@ -267,7 +273,7 @@ void EventLoop::loop()
         std::vector<Channel*> active_chns;
         active_chns = epoll->wait();
         for (auto chn : active_chns) {
-            chn->handleEvent();
+            wq->submit(std::move(chn->getEventCallBack()));
         }
     }
 }
@@ -342,9 +348,9 @@ void Server::handleNewConnection()
 
 void Server::handleClientDisconnect(int fd)
 {
-    LOG_INFO("client disconnected fd:" + std::to_string(fd));
     auto it = connections.find(fd);
     if (it!= connections.end()) {
+        LOG_INFO("client disconnected fd:" + std::to_string(fd));
         connections.erase(fd);
     }
 }
@@ -362,6 +368,7 @@ void Server::handleActiveConnection(int fd)
             handleClientDisconnect(fd);
             break;
         } else if (read_bytes == -1 && errno == EINTR) {
+            LOG_ERROR("recv message interrupted");
             continue;  // 信号中断，继续读取
         } else if (read_bytes == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
             LOG_INFO("message from client fd: " + std::to_string(fd) + " message: " + buffer.cStr());
@@ -369,6 +376,7 @@ void Server::handleActiveConnection(int fd)
             buffer.clear();
             break;  // 非阻塞模式下暂时无数据，退出读取循环
         } else {
+            handleClientDisconnect(fd);
             break;
         }
     }
