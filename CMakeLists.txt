@@ -2,6 +2,16 @@ cmake_minimum_required(VERSION 3.10)
 
 project(SocketFramework LANGUAGES CXX)
 
+option(BUILD_DEBUG "Build in debug mode" ON)
+
+if(BUILD_DEBUG)
+    set(CMAKE_BUILD_TYPE Debug)
+    message(STATUS "Building in DEBUG mode")
+else()
+    set(CMAKE_BUILD_TYPE Release)
+    message(STATUS "Building in RELEASE mode")
+endif()
+
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)

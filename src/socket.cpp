@@ -2,7 +2,7 @@
 
 namespace net {
 
-void setNonBlocking(int fd)
+void SocketUtils::setNonBlocking(int fd)
 {
     fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
 }
@@ -178,10 +178,9 @@ void Epoll::updateChannel(Channel& channel)
     channel.setInEpoll(true);
 }
 
-Channel::Channel(int fd, std::function<void()> cb)
+Channel::Channel(int fd)
 {
     this->monitor_fd = fd;
-    this->event_cb = cb;
     monitor_events = 0;
 }
 
@@ -215,30 +214,15 @@ void Channel::setRevents(uint32_t revents)
     this->revents = revents;
 }
 
-void Channel::setCallback(std::function<void()> callback)
-{
-    this->event_cb = callback;
-}
-
-void Channel::handleEvent()
-{
-    event_cb();
-}
-
-std::function<void()> Channel::getEventCallBack()
-{
-    return event_cb;
-}
-
-void Channel::setNonBlocking()
-{
-    fcntl(monitor_fd, F_SETFL, fcntl(monitor_fd, F_GETFL) | O_NONBLOCK);
-}
-
-AcceptChannel::AcceptChannel(int fd, std::function<void()> cb):Channel(fd, cb)
+AcceptChannel::AcceptChannel(int fd):Channel(fd)
 {
     setEvent();
-    setNonBlocking();
+    SocketUtils::setNonBlocking(fd);
+}
+
+Channel::ChannelCallback AcceptChannel::getChannelWorkCallback()
+{
+    return  accept_cb;
 }
 
 void AcceptChannel::setEvent()
@@ -247,10 +231,26 @@ void AcceptChannel::setEvent()
     monitor_events = EPOLLIN | EPOLLET;
 }
 
-ConnectionChannel::ConnectionChannel(int fd, std::function<void()> cb):Channel(fd, cb)
+void AcceptChannel::setAcceptCallback(AcceptCallback cb)
+{
+    accept_cb = std::move(cb);
+}
+
+void AcceptChannel::handleAccept()
+{
+    accept_cb();
+}
+
+ConnectionChannel::ConnectionChannel(int fd):Channel(fd)
 {
     setEvent();
-    setNonBlocking();
+    setDataCallback(std::bind(&ConnectionChannel::handleConnection, this));
+    SocketUtils::setNonBlocking(fd);
+}
+
+Channel::ChannelCallback ConnectionChannel::getChannelWorkCallback()
+{
+    return getDataCallback();
 }
 
 void ConnectionChannel::setEvent()
@@ -259,6 +259,56 @@ void ConnectionChannel::setEvent()
     monitor_events = EPOLLIN | EPOLLET;
 }
 
+void ConnectionChannel::setDataCallback(DataCallback cb)
+{
+    data_cb = std::move(cb);
+}
+
+void ConnectionChannel::setCloseCallback(CloseCallback cb)
+{
+    close_cb = std::move(cb);
+}
+
+ConnectionChannel::DataCallback ConnectionChannel::getDataCallback()
+{
+    return data_cb;
+}
+
+void ConnectionChannel::handleData()
+{
+    data_cb();
+}
+void ConnectionChannel::handleClose()
+{
+    close_cb(monitor_fd);
+}
+
+void ConnectionChannel::echo(char* msg)
+{
+    LOG_INFO("message from client fd: " + std::to_string(monitor_fd) + " message: " + msg);
+}
+
+void ConnectionChannel::handleConnection()
+{
+    char buf[1024];
+    while (true) {
+        bzero(&buf, sizeof(buf));
+        ssize_t read_bytes = recv(monitor_fd, buf, sizeof(buf) - 1, 0);
+        if (read_bytes > 0) {
+            echo(buf);
+        } else if (read_bytes == 0) {
+            handleClose();
+            break;
+        } else if (read_bytes == -1 && errno == EINTR) {
+            continue;  // 信号中断，继续读取
+        } else if (read_bytes == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            break;  // 非阻塞模式下暂时无数据，退出读取循环
+        } else {
+            handleClose();
+            break;
+        }
+    }
+}
 
 EventLoop::EventLoop()
 {
@@ -273,7 +323,7 @@ void EventLoop::loop()
         std::vector<Channel*> active_chns;
         active_chns = epoll->wait();
         for (auto chn : active_chns) {
-            wq->submit(std::move(chn->getEventCallBack()));
+            wq->submit(std::move(chn->getChannelWorkCallback()));
         }
     }
 }
@@ -328,7 +378,8 @@ Server::Server(std::string ip, uint16_t port)
         throw std::runtime_error("socket setup error");
     }
 
-    accept = std::make_shared<AcceptChannel>(server_socket->getFd(), std::bind(&Server::handleNewConnection, this));
+    accept = std::make_shared<AcceptChannel>(server_socket->getFd());
+    accept->setAcceptCallback(std::move(std::bind(&Server::handleNewConnection, this)));
     event_loop->addEvent(accept);
 }
 
@@ -341,7 +392,8 @@ void Server::handleNewConnection()
     }
     LOG_INFO("new connection from: " + cnt_addr->ToString() + " fd: " + std::to_string(cnt_fd));
 
-    auto client = std::make_shared<ConnectionChannel>(cnt_fd, std::bind(&Server::handleActiveConnection, this, cnt_fd));
+    auto client = std::make_shared<ConnectionChannel>(cnt_fd);
+    client->setCloseCallback(std::bind(&Server::handleClientDisconnect, this, cnt_fd));
     event_loop->addEvent(client);
     connections.emplace(cnt_fd, client);
 }
@@ -352,33 +404,6 @@ void Server::handleClientDisconnect(int fd)
     if (it!= connections.end()) {
         LOG_INFO("client disconnected fd:" + std::to_string(fd));
         connections.erase(fd);
-    }
-}
-
-void Server::handleActiveConnection(int fd)
-{
-    char buf[1024];
-    while (true) {
-        bzero(&buf, sizeof(buf));
-        ssize_t read_bytes = recv(fd, buf, sizeof(buf) - 1, 0);
-        if (read_bytes > 0) {
-            buf[read_bytes] = '\0';
-            buffer.append(buf, read_bytes);
-        } else if (read_bytes == 0) {
-            handleClientDisconnect(fd);
-            break;
-        } else if (read_bytes == -1 && errno == EINTR) {
-            LOG_ERROR("recv message interrupted");
-            continue;  // 信号中断，继续读取
-        } else if (read_bytes == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-            LOG_INFO("message from client fd: " + std::to_string(fd) + " message: " + buffer.cStr());
-            write(fd, buffer.cStr(), buffer.size());
-            buffer.clear();
-            break;  // 非阻塞模式下暂时无数据，退出读取循环
-        } else {
-            handleClientDisconnect(fd);
-            break;
-        }
     }
 }
 

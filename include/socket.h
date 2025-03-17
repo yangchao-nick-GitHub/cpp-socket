@@ -24,7 +24,17 @@
 
 namespace net {
 
-
+class Buffer {
+public:
+    Buffer() = default;
+    ~Buffer() = default;
+    void append(const char* data, size_t len);
+    const char* cStr();
+    size_t size();
+    void clear();
+private:
+    std::string buffer;
+};
 class InetAddress {
 public:
     virtual ~InetAddress() = default;
@@ -45,6 +55,11 @@ public:
 private:
     struct sockaddr_in serv_addr {};
     socklen_t addr_len;
+};
+
+class SocketUtils {
+public:
+    static void setNonBlocking(int fd);
 };
 
 class Socket {
@@ -94,43 +109,62 @@ class EventLoop;
 class Channel
 {
 protected:
+    using ChannelCallback = std::function<void()>;
     int monitor_fd;
     uint32_t monitor_events;
     uint32_t revents;
     bool is_in_epoll {false};
-    std::function<void()> event_cb {nullptr};
 public:
-    Channel(int fd, std::function<void()> cb);
+    Channel(int fd);
     virtual ~Channel() = default;
-
     virtual void setEvent() = 0;
-    std::function<void()> getEventCallBack();
-    void setRevents(uint32_t revents);
-    int getFd();
     uint32_t getEvents();
+
+    void setRevents(uint32_t revents);
+    uint32_t getRevents();
+    int getFd();
     bool getInEpoll();
     void setInEpoll(bool is_in_epoll);
-    void handleEvent();
-    void setNonBlocking();
-    void setCallback(std::function<void()> callback);
-    uint32_t getRevents();
+    virtual ChannelCallback getChannelWorkCallback() = 0;
+
     
 };
+
 
 class Buffer;
 
 class AcceptChannel : public Channel {
 public:
-    AcceptChannel(int fd, std::function<void()> cb);
+    using AcceptCallback = std::function<void()>;
+
+    AcceptChannel(int fd);
     void setEvent() override;
+    void setAcceptCallback(AcceptCallback cb);
+    void handleAccept();
+    ChannelCallback getChannelWorkCallback() override;
+private:
+    AcceptCallback accept_cb;
 };
 
 class ConnectionChannel : public Channel {
 public:
-    ConnectionChannel(int fd, std::function<void()> cb);
+    using DataCallback  = std::function<void()>;
+    using CloseCallback = std::function<void(int)>;
+
+    ConnectionChannel(int fd);
     void setEvent() override;
+    void setDataCallback(DataCallback cb);
+    void setCloseCallback(CloseCallback cb);
+    DataCallback getDataCallback();
+    void handleData();
+    void handleClose();
+    void handleConnection();
+    ChannelCallback getChannelWorkCallback() override;
 private:
-    std::shared_ptr<Buffer> buffer;
+    void echo(char* msg);
+private:
+    DataCallback data_cb;
+    CloseCallback close_cb;
 };
 
 class EventLoop {
@@ -146,17 +180,6 @@ private:
     std::shared_ptr<WorkQueue> wq;
 };
 
-class Buffer {
-public:
-    Buffer() = default;
-    ~Buffer() = default;
-    void append(const char* data, size_t len);
-    const char* cStr();
-    size_t size();
-    void clear();
-private:
-    std::string buffer;
-};
     
 class Server {
 public:
@@ -168,10 +191,9 @@ public:
     void start();
 
 private:
-    Buffer buffer;
     std::shared_ptr<EventLoop> event_loop;  
     std::shared_ptr<ServerSocket> server_socket;
-    std::shared_ptr<Channel> accept;
+    std::shared_ptr<AcceptChannel> accept;
     std::unordered_map<int, std::shared_ptr<ConnectionChannel>> connections;
 };
 
