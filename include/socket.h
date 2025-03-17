@@ -158,7 +158,7 @@ public:
     void handleClose();
     void handleConnection();
     ChannelCallback getChannelWorkCallback() override;
-    static void echo(int fd, char* msg, size_t size);
+    void echo(int fd, char* msg, size_t size);
 private:
     DataCallback data_cb;
     CloseCallback close_cb;
@@ -192,7 +192,7 @@ private:
     std::shared_ptr<EventLoop> event_loop;  
     std::shared_ptr<ServerSocket> server_socket;
     std::shared_ptr<AcceptChannel> accept;
-    DataHandlerFunc user_data_cb;
+    DataHandlerFunc user_data_cb {nullptr};
     std::unordered_map<int, std::shared_ptr<ConnectionChannel>> connections;
 };
 

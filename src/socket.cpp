@@ -383,7 +383,12 @@ void Server::handleNewConnection()
     LOG_INFO("new connection from: " + cnt_addr->ToString() + " fd: " + std::to_string(cnt_fd));
 
     auto client = std::make_shared<ConnectionChannel>(cnt_fd);
-    client->setDataCallback(std::bind(ConnectionChannel::echo, client.get()));
+    /* set data callback */
+    if (user_data_cb) {
+        client->setDataCallback(user_data_cb);
+    } else {
+        client->setDataCallback(std::bind(&ConnectionChannel::echo, client.get(), std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    }
     client->setCloseCallback(std::bind(&Server::handleClientDisconnect, this, cnt_fd));
     event_loop->addEvent(client);
     connections.emplace(cnt_fd, client);
