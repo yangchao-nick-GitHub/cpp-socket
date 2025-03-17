@@ -148,20 +148,17 @@ private:
 
 class ConnectionChannel : public Channel {
 public:
-    using DataCallback  = std::function<void()>;
+    using DataCallback  = std::function<void(int, char*, size_t)>;
     using CloseCallback = std::function<void(int)>;
 
     ConnectionChannel(int fd);
     void setEvent() override;
     void setDataCallback(DataCallback cb);
     void setCloseCallback(CloseCallback cb);
-    DataCallback getDataCallback();
-    void handleData();
     void handleClose();
     void handleConnection();
     ChannelCallback getChannelWorkCallback() override;
-private:
-    void echo(char* msg);
+    static void echo(int fd, char* msg, size_t size);
 private:
     DataCallback data_cb;
     CloseCallback close_cb;
@@ -183,17 +180,19 @@ private:
     
 class Server {
 public:
+    using DataHandlerFunc = std::function<void(int, char*, size_t)>;
     Server(std::string ip, uint16_t port);
     ~Server() = default;
-    void handleActiveConnection(int fd);
     void handleNewConnection();
     void handleClientDisconnect(int fd);
+    void setDataUserCallback(std::function<void(int, char*, size_t)> cb);
     void start();
 
 private:
     std::shared_ptr<EventLoop> event_loop;  
     std::shared_ptr<ServerSocket> server_socket;
     std::shared_ptr<AcceptChannel> accept;
+    DataHandlerFunc user_data_cb;
     std::unordered_map<int, std::shared_ptr<ConnectionChannel>> connections;
 };
 

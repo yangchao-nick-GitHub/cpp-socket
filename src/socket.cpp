@@ -244,13 +244,12 @@ void AcceptChannel::handleAccept()
 ConnectionChannel::ConnectionChannel(int fd):Channel(fd)
 {
     setEvent();
-    setDataCallback(std::bind(&ConnectionChannel::handleConnection, this));
     SocketUtils::setNonBlocking(fd);
 }
 
 Channel::ChannelCallback ConnectionChannel::getChannelWorkCallback()
 {
-    return getDataCallback();
+    return std::bind(&ConnectionChannel::handleConnection, this);
 }
 
 void ConnectionChannel::setEvent()
@@ -269,21 +268,12 @@ void ConnectionChannel::setCloseCallback(CloseCallback cb)
     close_cb = std::move(cb);
 }
 
-ConnectionChannel::DataCallback ConnectionChannel::getDataCallback()
-{
-    return data_cb;
-}
-
-void ConnectionChannel::handleData()
-{
-    data_cb();
-}
 void ConnectionChannel::handleClose()
 {
     close_cb(monitor_fd);
 }
 
-void ConnectionChannel::echo(char* msg)
+void ConnectionChannel::echo(int fd, char* msg, size_t size)
 {
     LOG_INFO("message from client fd: " + std::to_string(monitor_fd) + " message: " + msg);
 }
@@ -295,7 +285,7 @@ void ConnectionChannel::handleConnection()
         bzero(&buf, sizeof(buf));
         ssize_t read_bytes = recv(monitor_fd, buf, sizeof(buf) - 1, 0);
         if (read_bytes > 0) {
-            echo(buf);
+            data_cb(monitor_fd, buf, read_bytes);
         } else if (read_bytes == 0) {
             handleClose();
             break;
@@ -393,6 +383,7 @@ void Server::handleNewConnection()
     LOG_INFO("new connection from: " + cnt_addr->ToString() + " fd: " + std::to_string(cnt_fd));
 
     auto client = std::make_shared<ConnectionChannel>(cnt_fd);
+    client->setDataCallback(std::bind(ConnectionChannel::echo, client.get()));
     client->setCloseCallback(std::bind(&Server::handleClientDisconnect, this, cnt_fd));
     event_loop->addEvent(client);
     connections.emplace(cnt_fd, client);
@@ -405,6 +396,11 @@ void Server::handleClientDisconnect(int fd)
         LOG_INFO("client disconnected fd:" + std::to_string(fd));
         connections.erase(fd);
     }
+}
+
+void Server::setDataUserCallback(std::function<void(int, char*, size_t)> cb)
+{
+    user_data_cb = std::move(cb);
 }
 
 void Server::start()
